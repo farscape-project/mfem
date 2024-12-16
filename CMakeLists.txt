@@ -633,12 +633,12 @@ mfem_cache_path(INSTALL_INCLUDE_DIR "${install_include_dir_default}"
   "Relative or absolute path for installing header files.")
 mfem_cache_path(INSTALL_BIN_DIR "${install_bin_dir_default}"
   "Relative or absolute path for installing the binaries.")
-mfem_cache_path(INSTALL_LIB_DIR ${install_lib_dir_default}
+mfem_cache_path(INSTALL_LIB_DIR "${install_lib_dir_default}"
   "Relative or absolute path for installing the library.")
 mfem_cache_path(INSTALL_SHARE_DIR "${install_share_dir_default}"
   "Relative or absolute path for installing shared data.")
 # other options: "share/mfem/cmake", "lib/mfem/cmake"
-mfem_cache_path(INSTALL_CMAKE_DIR ${INSTALL_LIB_DIR}/cmake/mfem
+mfem_cache_path(INSTALL_CMAKE_DIR "${INSTALL_LIB_DIR}/cmake/mfem"
   "Relative or absolute path for installing cmake config files.")
 
 mfem_path_to_fullpath("${INSTALL_LIB_DIR}" "${CMAKE_INSTALL_PREFIX}" _lib_path)

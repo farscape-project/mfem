@@ -220,9 +220,9 @@ An optional installation of the library and the headers can be performed with
 
    make install [PREFIX=<dir>]
 
-The library will be installed in $(PREFIX)/lib, the headers in
-$(PREFIX)/include, and the configuration makefile (config.mk) in
-$(PREFIX)/share/mfem. The PREFIX option can also be set during configuration.
+The library will be installed in <PREFIX>/lib, the headers in
+<PREFIX>/include, and the configuration makefile (config.mk) in
+<PREFIX>/share/mfem. The PREFIX option can also be set during configuration.
 
 Information about the current build configuration can be viewed using
 
@@ -271,8 +271,8 @@ Build options:
 
 Installation options:
    PREFIX  - Specify the installation directory. The library (libmfem.a) will be
-             installed in $(PREFIX)/lib, the headers in $(PREFIX)/include, and
-             the configuration makefile (config.mk) in $(PREFIX)/share/mfem.
+             installed in <PREFIX>/lib, the headers in <PREFIX>/include, and
+             the configuration makefile (config.mk) in <PREFIX>/share/mfem.
    INSTALL - Specify the install program, default = /usr/bin/install
    INSTALL_DEF_PERM - Specify the default install permissions. This affects
                       headers and configuration makefiles, default = 644
@@ -984,8 +984,9 @@ or
    cmake --build . --config Release --target install  [Xcode]
    cmake --build . --config Release --target INSTALL  [Visual Studio]
 
-The library will be installed in <PREFIX>/lib, the headers in <PREFIX>/include,
-and the configuration CMake files in <PREFIX>/lib/cmake/mfem.
+By default, the library will be installed in <CMAKE_INSTALL_PREFIX>/lib, the
+headers in <CMAKE_INSTALL_PREFIX>/include, and the configuration CMake files in
+<CMAKE_INSTALL_PREFIX>/lib/cmake/mfem.
 
 
 Configuration variables (CMake)
