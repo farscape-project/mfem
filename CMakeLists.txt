@@ -615,20 +615,13 @@ set(MASTER_HEADERS
   ${PROJECT_SOURCE_DIR}/mfem.hpp
   ${PROJECT_SOURCE_DIR}/mfem-performance.hpp)
 
-# Installation options
-set(MFEM_USE_GNUINSTALLDIRS OFF
-  CACHE BOOL "Enable to use the GNUInstallDirs CMake module.")
-set(install_include_dir_default include)
-set(install_bin_dir_default bin)
-set(install_lib_dir_default lib)
-set(install_share_dir_default share)
-if (MFEM_USE_GNUINSTALLDIRS)
-  include(GNUInstallDirs)
-  set(install_include_dir_default "${CMAKE_INSTALL_INCLUDEDIR}")
-  set(install_bin_dir_default "${CMAKE_INSTALL_BINDIR}")
-  set(install_lib_dir_default "${CMAKE_INSTALL_LIBDIR}")
-  set(install_share_dir_default "${CMAKE_INSTALL_DATAROOTDIR}")
-endif()
+# Installation options (we use GNUInstallDirs but prefer lib on all platforms)
+mfem_cache_path(CMAKE_INSTALL_LIBDIR "lib" "Object code libraries (lib)")
+include(GNUInstallDirs)
+set(install_include_dir_default "${CMAKE_INSTALL_INCLUDEDIR}")
+set(install_bin_dir_default "${CMAKE_INSTALL_BINDIR}")
+set(install_lib_dir_default "${CMAKE_INSTALL_LIBDIR}")
+set(install_share_dir_default "${CMAKE_INSTALL_DATAROOTDIR}")
 mfem_cache_path(INSTALL_INCLUDE_DIR "${install_include_dir_default}"
   "Relative or absolute path for installing header files.")
 mfem_cache_path(INSTALL_BIN_DIR "${install_bin_dir_default}"
