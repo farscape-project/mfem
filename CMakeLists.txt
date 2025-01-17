@@ -756,11 +756,17 @@ add_dependencies(exec
 #  - https://gitlab.kitware.com/cmake/cmake/issues/8438
 #  - https://cmake.org/Bug/view.php?id=8438
 
-# If the source and the build directories are not the same, add data directory
-# that defines 'copy_data' target to copy data directory contents to the build
-# directory
+# Add a target to copy the mfem data directory to the build directory
+set_property(DIRECTORY APPEND
+  PROPERTY CMAKE_CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/data)
+file(GLOB DATA_FILES ${PROJECT_SOURCE_DIR}/data/*)
+add_custom_target(copy_data
+  COMMAND ${CMAKE_COMMAND} -E make_directory data
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${DATA_FILES} data
+  COMMENT "Syncing the data directory ...")
+# Add 'copy_data' as a prerequisite for all executables, if the source and the
+# build directories are not the same.
 if (NOT ("${PROJECT_SOURCE_DIR}" STREQUAL "${PROJECT_BINARY_DIR}"))
-  add_subdirectory(data)
   add_dependencies(${MFEM_EXEC_PREREQUISITES_TARGET_NAME} copy_data)
 endif()
 
