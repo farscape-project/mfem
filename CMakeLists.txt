@@ -573,9 +573,6 @@ set(MFEM_TPLS OPENMP HYPRE LAPACK BLAS SuperLUDist STRUMPACK METIS SuiteSparse
 
 # Add all created targets and *_FOUND libraries in the variables TPL_TARGETS and
 # TPL_LIBRARIES, respectively.
-set(TPL_TARGETS)
-set(TPL_LIBRARIES "")
-set(TPL_INCLUDE_DIRS "")
 foreach(TPL IN LISTS MFEM_TPLS)
   if (${TPL}_FOUND OR TARGET ${TPL})
     message(STATUS "MFEM: using package ${TPL}")

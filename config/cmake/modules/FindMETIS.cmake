@@ -18,24 +18,25 @@
 #   - METIS (imported library target)
 #   - METIS_VERSION_5 (cache variable)
 
-if (FETCH_TPLS)
+if (METIS_FETCH)
+  set(METIS_FETCH_VERSION 4.0.3)
   add_library(METIS STATIC IMPORTED)
   # define external project
-  message(STATUS "Will fetch metis v4.0.3 to be built with default options")
+  message(STATUS "Will fetch METIS ${METIS_FETCH_VERSION} to be built with default options")
   set(PREFIX ${CMAKE_BINARY_DIR}/fetch/metis)
   include(ExternalProject)
   ExternalProject_Add(metis
     GIT_REPOSITORY https://github.com/mfem/tpls
     GIT_TAG b60352fbe9675d374b00828055e55be4584c7995 # tag from 1/16/25
     GIT_SHALLOW TRUE
+    UPDATE_DISCONNECTED TRUE
     PREFIX ${PREFIX}
-    CONFIGURE_COMMAND tar -xzf ../metis/metis-4.0.3.tar.gz
-    BUILD_COMMAND cd metis-4.0.3 && make
-    INSTALL_COMMAND mkdir -p ${PREFIX}/Lib && cp metis-4.0.3/libmetis.a ${PREFIX}/Lib/)
+    CONFIGURE_COMMAND tar xzf ../metis/metis-${METIS_FETCH_VERSION}-mac.tgz --strip=1
+    INSTALL_COMMAND mkdir -p ${PREFIX}/lib && cp libmetis.a ${PREFIX}/lib/)
   # set imported library target properties
   add_dependencies(METIS metis metis-install)
   set_target_properties(METIS PROPERTIES
-    IMPORTED_LOCATION ${PREFIX}/Lib/libmetis.a)
+    IMPORTED_LOCATION ${PREFIX}/lib/libmetis.a)
   # set cache variables that would otherwise be set after mfem_find_package call
   set(METIS_VERSION_5 FALSE CACHE BOOL "Is METIS version 5?")
   return()
