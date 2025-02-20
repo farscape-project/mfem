@@ -20,22 +20,10 @@
 #   - HYPRE (imported library target)
 #   - HYPRE_VERSION (cache variable)
 
-if (HYPRE_FOUND OR TARGET HYPRE)
-  if (HYPRE_USING_CUDA)
-    find_package(CUDAToolkit REQUIRED)
-  endif()
-  if (HYPRE_USING_HIP)
-    find_package(rocsparse REQUIRED)
-    find_package(rocrand REQUIRED)
-  endif()
-  return()
-endif()
-
 if (HYPRE_FETCH OR FETCH_TPLS)
-  set(HYPRE_FETCH_VERSION 2.32.0)
+  set(HYPRE_FETCH_VERSION 2.33.0)
   add_library(HYPRE STATIC IMPORTED)
   # set options and associated dependencies
-  set(CMAKE_OPTIONS)
   list(APPEND CMAKE_OPTIONS -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE})
   if (MFEM_USE_CUDA)
     list(APPEND CMAKE_OPTIONS -DHYPRE_WITH_CUDA:BOOL=ON)
@@ -65,7 +53,7 @@ if (HYPRE_FETCH OR FETCH_TPLS)
     CMAKE_CACHE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=${PREFIX} -DCMAKE_INSTALL_LIBDIR:PATH=lib ${CMAKE_OPTIONS})
   file(MAKE_DIRECTORY ${PREFIX}/include)
   # set imported library target properties
-  add_dependencies(HYPRE hypre hypre-install)
+  add_dependencies(HYPRE hypre)
   set_target_properties(HYPRE PROPERTIES
     IMPORTED_LOCATION ${PREFIX}/lib/libHYPRE.a
     INTERFACE_INCLUDE_DIRECTORIES ${PREFIX}/include)
@@ -77,6 +65,17 @@ if (HYPRE_FETCH OR FETCH_TPLS)
   math(EXPR HYPRE_VERSION "10000*${HYPRE_MAJOR_VERSION} + 100*${HYPRE_MINOR_VERSION} + ${HYPRE_PATCH_VERSION}")
   # set cache variables that would otherwise be set after mfem_find_package call
   set(HYPRE_VERSION ${HYPRE_VERSION} CACHE STRING "HYPRE version." FORCE)
+  return()
+endif()
+
+if (HYPRE_FOUND)
+  if (HYPRE_USING_CUDA)
+    find_package(CUDAToolkit REQUIRED)
+  endif()
+  if (HYPRE_USING_HIP)
+    find_package(rocsparse REQUIRED)
+    find_package(rocrand REQUIRED)
+  endif()
   return()
 endif()
 
