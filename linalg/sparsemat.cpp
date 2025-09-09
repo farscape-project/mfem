@@ -46,6 +46,12 @@
 #define MFEM_GPUSPARSE_ALG HIPSPARSE_CSRMV_ALG1
 #endif // defined(MFEM_USE_CUDA)
 
+#ifdef MFEM_USE_SINGLE
+   #define MFEM_CUDA_or_HIP_REAL MFEM_CUDA_or_HIP(_R_32F)
+#else
+   #define MFEM_CUDA_or_HIP_REAL MFEM_CUDA_or_HIP(_R_64F)
+#endif
+
 namespace mfem
 {
 
@@ -464,64 +470,8 @@ void SparseMatrix::SortColumnIndices()
    }
 
 #ifdef MFEM_USE_CUDA_OR_HIP
-   if ( Device::Allows( Backend::CUDA_MASK ))
+   if ( Device::Allows( Backend::CUDA_MASK | Backend::HIP_MASK ) )
    {
-#if defined(MFEM_USE_CUDA)
-      size_t pBufferSizeInBytes = 0;
-      void *pBuffer = NULL;
-
-      const int n = Height();
-      const int m = Width();
-      const int nnzA = J.Capacity();
-      real_t * d_a_sorted = ReadWriteData();
-      const int * d_ia = ReadI();
-      int * d_ja_sorted = ReadWriteJ();
-      csru2csrInfo_t sortInfoA;
-
-      cusparseMatDescr_t matA_descr;
-      cusparseCreateMatDescr( &matA_descr );
-      cusparseSetMatIndexBase( matA_descr, CUSPARSE_INDEX_BASE_ZERO );
-      cusparseSetMatType( matA_descr, CUSPARSE_MATRIX_TYPE_GENERAL );
-
-      cusparseCreateCsru2csrInfo( &sortInfoA );
-
-#ifdef MFEM_USE_SINGLE
-      cusparseScsru2csr_bufferSizeExt( handle, n, m, nnzA, d_a_sorted, d_ia,
-                                       d_ja_sorted, sortInfoA,
-                                       &pBufferSizeInBytes);
-#elif defined MFEM_USE_DOUBLE
-      cusparseDcsru2csr_bufferSizeExt( handle, n, m, nnzA, d_a_sorted, d_ia,
-                                       d_ja_sorted, sortInfoA,
-                                       &pBufferSizeInBytes);
-#else
-      MFEM_ABORT("Floating point type undefined");
-#endif
-
-      CuMemAlloc( &pBuffer, pBufferSizeInBytes );
-
-#ifdef MFEM_USE_SINGLE
-      cusparseScsru2csr( handle, n, m, nnzA, matA_descr, d_a_sorted, d_ia,
-                         d_ja_sorted, sortInfoA, pBuffer);
-#elif defined MFEM_USE_DOUBLE
-      cusparseDcsru2csr( handle, n, m, nnzA, matA_descr, d_a_sorted, d_ia,
-                         d_ja_sorted, sortInfoA, pBuffer);
-#else
-      MFEM_ABORT("Floating point type undefined");
-#endif
-
-      // The above call is (at least in some cases) asynchronous, so we need to
-      // wait for it to finish before we can free device temporaries.
-      MFEM_STREAM_SYNC;
-
-      cusparseDestroyCsru2csrInfo( sortInfoA );
-      cusparseDestroyMatDescr( matA_descr );
-
-      CuMemFree( pBuffer );
-#endif
-   }
-   else if ( Device::Allows( Backend::HIP_MASK ))
-   {
-#if defined(MFEM_USE_HIP)
       size_t pBufferSizeInBytes = 0;
       void *pBuffer = NULL;
       int *P = NULL;
@@ -529,44 +479,54 @@ void SparseMatrix::SortColumnIndices()
       const int n = Height();
       const int m = Width();
       const int nnzA = J.Capacity();
-      real_t * d_a_sorted = ReadWriteData();
+      real_t * d_a_unsorted = ReadWriteData();
       const int * d_ia = ReadI();
       int * d_ja_sorted = ReadWriteJ();
 
-      hipsparseMatDescr_t descrA;
-      hipsparseCreateMatDescr( &descrA );
-      // FIXME: There is not in-place version of csr sort in hipSPARSE currently, so we make
-      //        a temporary copy of the data for gthr, sort that, and then copy the sorted values
-      //        back to the array being returned. Where there is an in-place version available,
-      //        we should use it.
+      MFEM_cu_or_hip(sparseSpVecDescr_t) vec_permutation;
+      MFEM_cu_or_hip(sparseDnVecDescr_t) vec_values;
+      MFEM_cu_or_hip(sparseMatDescr_t) matA_descr;
+
+      // Temporary memory for the result of the gather
       Array< real_t > a_tmp( nnzA );
-      real_t *d_a_tmp = a_tmp.Write();
+      real_t * d_a_sorted = a_tmp.Write();
 
-      hipsparseXcsrsort_bufferSizeExt(handle, n, m, nnzA, d_ia, d_ja_sorted,
-                                      &pBufferSizeInBytes);
+      // Memory for the permutation map
+      MFEM_Cu_or_Hip(MemAlloc)( (void**)&P, sizeof(int)*nnzA );
 
-      HipMemAlloc( &pBuffer, pBufferSizeInBytes );
-      HipMemAlloc( (void**)&P, nnzA * sizeof(int) );
+      MFEM_cu_or_hip(sparseCreateSpVec)( &vec_permutation, nnzA, nnzA, P,
+                                         d_a_sorted,
+                                         MFEM_CU_or_HIP(SPARSE_INDEX_32I),
+                                         MFEM_CU_or_HIP(SPARSE_INDEX_BASE_ZERO),
+                                         MFEM_CUDA_or_HIP_REAL );
+      MFEM_cu_or_hip(sparseCreateDnVec)( &vec_values, nnzA, d_a_unsorted,
+                                         MFEM_CUDA_or_HIP_REAL );
+      MFEM_cu_or_hip(sparseCreateMatDescr)( &matA_descr );
 
-      hipsparseCreateIdentityPermutation(handle, nnzA, P);
-      hipsparseXcsrsort(handle, n, m, nnzA, descrA, d_ia, d_ja_sorted, P, pBuffer);
+      // Query working space for the sort
+      MFEM_cu_or_hip(sparseXcsrsort_bufferSizeExt)( handle, n, m, nnzA,
+                                                    d_ia, d_ja_sorted,
+                                                    &pBufferSizeInBytes );
 
-#if defined(MFEM_USE_SINGLE)
-      hipsparseSgthr(handle, nnzA, d_a_sorted, d_a_tmp, P,
-                     HIPSPARSE_INDEX_BASE_ZERO);
-#elif defined(MFEM_USE_DOUBLE)
-      hipsparseDgthr(handle, nnzA, d_a_sorted, d_a_tmp, P,
-                     HIPSPARSE_INDEX_BASE_ZERO);
-#else
-      MFEM_ABORT("Unsupported floating point type!");
-#endif
+      MFEM_Cu_or_Hip(MemAlloc)( &pBuffer, pBufferSizeInBytes );
+
+      // Create identity permutation map
+      mfem::forall( nnzA, [=] MFEM_HOST_DEVICE (int i) { P[i] = i; } );
+
+      // Sort the column indices
+      MFEM_cu_or_hip(sparseXcsrsort)( handle, n, m, nnzA, matA_descr,
+                                      d_ia, d_ja_sorted, P, pBuffer );
+
+      // Gather sorted values
+      MFEM_cu_or_hip(sparseGather)( handle, vec_values, vec_permutation );
 
       A.CopyFrom( a_tmp.GetMemory(), nnzA );
-      hipsparseDestroyMatDescr( descrA );
 
-      HipMemFree( pBuffer );
-      HipMemFree( P );
-#endif
+      MFEM_cu_or_hip(sparseDestroySpVec)( vec_permutation );
+      MFEM_cu_or_hip(sparseDestroyDnVec)( vec_values );
+      MFEM_cu_or_hip(sparseDestroyMatDescr)( matA_descr );
+      MFEM_Cu_or_Hip(MemFree)( pBuffer );
+      MFEM_Cu_or_Hip(MemFree)( P );
    }
    else
 #endif // MFEM_USE_CUDA_OR_HIP
@@ -821,27 +781,15 @@ void SparseMatrix::AddMult(const Vector &x, Vector &y, const real_t a) const
             MFEM_CU_or_HIP(SPARSE_INDEX_32I),
             MFEM_CU_or_HIP(SPARSE_INDEX_32I),
             MFEM_CU_or_HIP(SPARSE_INDEX_BASE_ZERO),
-#ifdef MFEM_USE_SINGLE
-            MFEM_CUDA_or_HIP(_R_32F));
-#else
-            MFEM_CUDA_or_HIP(_R_64F));
-#endif
+            MFEM_CUDA_or_HIP_REAL);
 
          // Create handles for input/output vectors
          MFEM_cu_or_hip(sparseCreateDnVec)(&vecX_descr,
                                            x.Size(),
                                            const_cast<real_t *>(d_x),
-#ifdef MFEM_USE_SINGLE
-                                           MFEM_CUDA_or_HIP(_R_32F));
-#else
-                                           MFEM_CUDA_or_HIP(_R_64F));
-#endif
+                                           MFEM_CUDA_or_HIP_REAL);
          MFEM_cu_or_hip(sparseCreateDnVec)(&vecY_descr, y.Size(), d_y,
-#ifdef MFEM_USE_SINGLE
-                                           MFEM_CUDA_or_HIP(_R_32F));
-#else
-                                           MFEM_CUDA_or_HIP(_R_64F));
-#endif
+                                           MFEM_CUDA_or_HIP_REAL);
 #else
          cusparseCreateMatDescr(&matA_descr);
          cusparseSetMatIndexBase(matA_descr, CUSPARSE_INDEX_BASE_ZERO);
@@ -860,11 +808,7 @@ void SparseMatrix::AddMult(const Vector &x, Vector &y, const real_t a) const
          vecX_descr,
          &beta,
          vecY_descr,
-#ifdef MFEM_USE_SINGLE
-         MFEM_CUDA_or_HIP(_R_32F),
-#else
-         MFEM_CUDA_or_HIP(_R_64F),
-#endif
+         MFEM_CUDA_or_HIP_REAL,
          MFEM_GPUSPARSE_ALG,
          &newBufferSize);
 
@@ -891,11 +835,7 @@ void SparseMatrix::AddMult(const Vector &x, Vector &y, const real_t a) const
          vecX_descr,
          &beta,
          vecY_descr,
-#ifdef MFEM_USE_SINGLE
-         MFEM_CUDA_or_HIP(_R_32F),
-#else
-         MFEM_CUDA_or_HIP(_R_64F),
-#endif
+         MFEM_CUDA_or_HIP_REAL,
          MFEM_GPUSPARSE_ALG,
          dBuffer);
 #else
