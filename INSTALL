@@ -949,8 +949,8 @@ former takes precedence over the latter) and its path/name can be changed with
    cmake <mfem-source-dir> -DUSER_CONFIG=<user_config_file>
 
 Debug and optimization options are controlled through the CMake variable
-CMAKE_BUILD_TYPE which can be set to standard values like "Debug", and "Release"
-(default).
+CMAKE_BUILD_TYPE which can be set to standard values like "Debug",
+"RelWithDebInfo" or "Release" (default).
 
 To use a specific generator use the "-G <generator>" option of cmake:
 
