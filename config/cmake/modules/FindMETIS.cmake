@@ -32,7 +32,7 @@ if (MFEM_FETCH_METIS OR MFEM_FETCH_TPLS)
     UPDATE_DISCONNECTED TRUE
     PREFIX ${PREFIX}
     CONFIGURE_COMMAND tar -xzf ../metis/metis-${METIS_FETCH_VERSION}-mac.tgz --strip=1
-    BUILD_COMMAND $(MAKE) COPTIONS=-Wno-incompatible-pointer-types
+    BUILD_COMMAND $(MAKE) clean && $(MAKE) "COPTIONS=-Wno-incompatible-pointer-types $<$<BOOL:${BUILD_SHARED_LIBS}>:-fPIC>"
     INSTALL_COMMAND mkdir -p ${PREFIX}/lib && cp libmetis.a ${PREFIX}/lib/)
   # set imported library target properties
   add_dependencies(METIS metis)

@@ -82,6 +82,9 @@ if (MFEM_FETCH_HYPRE OR MFEM_FETCH_TPLS)
   if (MFEM_USE_SINGLE)
     list(APPEND HYPRE_CMAKE_OPTIONS -DHYPRE_ENABLE_SINGLE:BOOL=ON)
   endif()
+  if (BUILD_SHARED_LIBS)
+    list(APPEND HYPRE_CMAKE_OPTIONS -DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON)
+  endif()
   # define external project and create future include directory so it is present
   # to pass CMake checks at end of MFEM configuration step
   message(STATUS "Will fetch HYPRE ${HYPRE_FETCH_TAG} to be built with ${HYPRE_CMAKE_OPTIONS}")
