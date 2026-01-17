@@ -1110,18 +1110,10 @@ HypreParMatrix::HypreParMatrix(
    height = GetNumRows();
    width = GetNumCols();
 
-   if (!hypre_arrays)
-   {
-      const MemoryType host_mt = Device::GetHostMemoryType();
-      diagOwner = HypreCsrToMem(A->diag, host_mt, true, mem_diag);
-      offdOwner = HypreCsrToMem(A->offd, host_mt, true, mem_offd);
-   }
-   else
-   {
-      const MemoryType host_mt = MemoryType::HOST;
-      diagOwner = HypreCsrToMem(A->diag, host_mt, false, mem_diag);
-      offdOwner = HypreCsrToMem(A->offd, host_mt, false, mem_offd);
-   }
+   const MemoryType host_mt = Device::GetHostMemoryType();
+   diagOwner = HypreCsrToMem(A->diag, host_mt, !hypre_arrays, mem_diag);
+   offdOwner = HypreCsrToMem(A->offd, host_mt, !hypre_arrays, mem_offd);
+
    hypre_CSRMatrixSetRownnz(A->diag);
    hypre_CSRMatrixSetRownnz(A->offd);
 
